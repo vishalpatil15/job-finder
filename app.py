@@ -3,51 +3,69 @@ import google.generativeai as genai
 import requests
 from pypdf import PdfReader
 import json
-import re
 
 # --- 1. PAGE CONFIG & UI ---
 st.set_page_config(page_title="TagBuddy: Your Best Job Match Maker", page_icon="🏷️", layout="wide")
 
 st.markdown("""
     <style>
-    /* Professional Background */
+    /* Professional Dark Background */
     .stApp {
         background: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop');
         background-size: cover;
         background-attachment: fixed;
     }
     
-    /* Hide Branding */
+    /* Hide Default Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Main Container */
+    /* UPPER SECTION: Glassmorphism Container */
     .main-container {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.75); /* Darker for better white text contrast */
         padding: 40px;
         border-radius: 20px;
         border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 30px;
+    }
+
+    /* UPPER SECTION: Text Colors (All White) */
+    h1 { color: #ffffff !important; text-shadow: 0px 2px 4px rgba(0,0,0,0.5); }
+    h2, h3 { color: #ffffff !important; }
+    p { color: #f0f0f0 !important; font-size: 16px; }
+    
+    /* Input Labels - Force White */
+    label { 
+        color: #ffffff !important; 
+        font-weight: 600 !important; 
+        font-size: 16px !important; 
     }
     
-    /* WHITE JOB CARDS (High Contrast) */
+    /* File Uploader Text */
+    .stFileUploader label { color: white !important; }
+    .stFileUploader div { color: white !important; }
+    
+    /* ------------------------------------------- */
+    /* SEARCH RESULTS: White Card + Green Border */
+    /* ------------------------------------------- */
     .job-card {
-        background-color: #ffffff !important;
+        background-color: #ffffff !important; /* Pure White Background */
         padding: 25px;
         border-radius: 12px;
         margin-bottom: 20px;
         border-left: 8px solid #2e7d32; /* Success Green */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
         transition: transform 0.2s;
     }
     .job-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-3px);
     }
     
-    /* Text Styling inside Cards */
+    /* Result Text Colors (Black/Dark Grey for readability on white) */
     .job-title { 
         color: #000000 !important; 
-        font-size: 20px !important; 
+        font-size: 22px !important; 
         font-weight: 800 !important; 
         margin-bottom: 8px !important; 
     }
@@ -57,6 +75,7 @@ st.markdown("""
         font-size: 14px !important; 
         text-transform: uppercase;
         letter-spacing: 1px;
+        margin-bottom: 5px;
     }
     .job-snippet { 
         color: #333333 !important; 
@@ -77,11 +96,9 @@ st.markdown("""
         margin-top: 15px;
     }
     .apply-btn:hover { background-color: #1b5e20; }
-
-    /* Input Styling */
-    h1 { color: white !important; text-shadow: 2px 2px 4px #000000; }
-    p { color: #e0e0e0 !important; }
-    label { color: white !important; font-weight: 600; font-size: 16px; }
+    
+    /* Error/Success Messages */
+    .stAlert { color: black; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -98,7 +115,6 @@ def get_smart_queries(role, exp, api_key):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    # We force specific site searches to avoid generic lists
     prompt = f"""
     Act as a recruitment expert. Generate 4 Google search queries to find individual job postings.
     Role: {role}
@@ -117,7 +133,6 @@ def get_smart_queries(role, exp, api_key):
         response = model.generate_content(prompt)
         return json.loads(response.text.strip().replace('```json', '').replace('```', ''))
     except:
-        # Fallback queries if AI fails
         return [f"site:linkedin.com/jobs/view {role} Pune", f"site:naukri.com/job-listings {role} Pune"]
 
 # --- 4. MAIN APP ---
@@ -143,39 +158,35 @@ with st.container():
                 # 1. Get Queries
                 queries = get_smart_queries(role, exp, gemini_key)
                 
-                # 2. Search & Filter
+                # 2. Search
                 all_results = []
                 headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
                 
                 for q in queries:
-                    # We ask for 10 results per query to ensure we find enough valid links
                     res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 10})
                     results = res.json().get('organic', [])
                     all_results.extend(results)
                 
-                # 3. Intelligent Deduplication & Cleaning
+                # 3. Filter
                 seen_links = set()
                 top_jobs = []
                 
                 for job in all_results:
                     link = job.get('link', '')
-                    title = job.get('title', '')
-                    
-                    # Filter: Must be a direct job link, not a search page
                     if link not in seen_links and "search" not in link and "jobs/collections" not in link:
                         seen_links.add(link)
                         top_jobs.append(job)
-                        
                     if len(top_jobs) >= 10:
                         break
                 
-                # 4. Display
+                # 4. Display Results
+                st.markdown('</div>', unsafe_allow_html=True) # Close the glass container before showing cards
+                
                 if not top_jobs:
-                    st.warning("No specific listings found right now. Try broadening the 'Target Role'.")
+                    st.warning("No specific listings found. Try changing the role.")
                 else:
-                    st.markdown(f"### Found {len(top_jobs)} Individual Openings")
+                    st.markdown("### ✨ Top 10 Direct Matches")
                     for job in top_jobs:
-                        # Clean up the domain name for display
                         source_domain = job['link'].split('/')[2].replace('www.', '')
                         
                         st.markdown(f"""
@@ -186,5 +197,3 @@ with st.container():
                                 <a class="apply-btn" href="{job['link']}" target="_blank">Apply Now ➜</a>
                             </div>
                         """, unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
