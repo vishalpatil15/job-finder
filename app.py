@@ -35,7 +35,7 @@ if uploaded_file and gemini_key and serper_key:
             
             # 2. Ask Gemini to create search queries
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+           model = genai.GenerativeModel('gemini-2.5-flash')
             prompt = f"Resume text: {resume_content}. Give me 3 Google search strings for 'Corporate Strategy' or 'Product Management' jobs in Pune or Bangalore on site:naukri.com or site:linkedin.com/jobs. Return ONLY a JSON list of strings."
             
             response = model.generate_content(prompt)
