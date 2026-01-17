@@ -4,6 +4,16 @@ import requests
 from pypdf import PdfReader
 import json
 
+# This hides the footer, the hamburger menu, and the header
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 # --- 1. PAGE CONFIG & CUSTOM STYLING ---
 st.set_page_config(page_title="Vishal's Career Dashboard", layout="wide")
 
