@@ -9,9 +9,15 @@ st.set_page_config(page_title="TagBuddy: Your Best Job Match Maker", page_icon="
 
 st.markdown("""
     <style>
-    /* CLASSY SIMPLE BACKGROUND */
+    /* PREMIUM WALLPAPER WITH READABILITY OVERLAY 
+       We use a linear-gradient overlay (rgba 0,0,0,0.5) on top of the image 
+       to darken it slightly, ensuring white text is always readable.
+    */
     .stApp {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        background: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.6)),
+                    url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop');
+        background-size: cover;
+        background-position: center;
         background-attachment: fixed;
     }
     
@@ -22,17 +28,19 @@ st.markdown("""
 
     /* UPPER SECTION: Darker Glass for Maximum Contrast */
     .main-container {
-        background: rgba(30, 41, 59, 0.7);
+        background: rgba(30, 41, 59, 0.6); /* Slightly more transparent to let bg show */
         padding: 40px;
         border-radius: 15px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px); /* Adds premium blur effect */
+        -webkit-backdrop-filter: blur(10px);
     }
 
     /* TEXT COLORS - FORCE WHITE FOR INPUTS */
-    h1 { color: #ffffff !important; font-weight: 700; letter-spacing: -1px; }
-    p { color: #cbd5e1 !important; font-size: 16px; }
+    h1 { color: #ffffff !important; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    p { color: #e2e8f0 !important; font-size: 16px; }
     
     /* Force specific input labels to be white */
     .stSelectbox label, .stFileUploader label {
@@ -45,10 +53,14 @@ st.markdown("""
     .stFileUploader {
         padding-top: 15px;
     }
+    .stFileUploader > div > div {
+         background-color: rgba(255,255,255,0.05);
+         border: 1px dashed rgba(255,255,255,0.3);
+    }
     
     /* BUTTON STYLING */
     .stButton > button {
-        background-color: #3b82f6; /* Classy Blue */
+        background-color: #10b981; /* Matching the green accent */
         color: white;
         font-weight: bold;
         padding: 12px 30px;
@@ -56,23 +68,26 @@ st.markdown("""
         border: none;
         width: 100%;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     }
     .stButton > button:hover {
-        background-color: #2563eb;
+        background-color: #059669;
         transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
     }
 
     /* ------------------------------------------- */
     /* SEARCH RESULTS: White Card + Green Border */
     /* ------------------------------------------- */
     .job-card {
-        background-color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.95) !important; /* Slight transparency for premium feel */
         padding: 25px;
         border-radius: 12px;
         margin-bottom: 20px;
         border-left: 6px solid #10b981; /* Fresh Green */
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
         transition: transform 0.2s;
+        backdrop-filter: blur(5px);
     }
     .job-card:hover {
         transform: translateY(-3px);
@@ -110,11 +125,12 @@ st.markdown("""
         font-weight: 600;
         margin-top: 15px;
         font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .apply-btn:hover { background-color: #059669; }
     
     /* Alert Messages */
-    .stAlert { background-color: rgba(255,255,255,0.9); color: #000; }
+    .stAlert { background-color: rgba(255,255,255,0.95); color: #000; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -153,7 +169,7 @@ def get_smart_queries(role, exp, api_key):
 
 # --- 4. MAIN APP ---
 st.title("🏷️ TagBuddy")
-st.markdown("<p style='margin-top: -15px; margin-bottom: 20px;'>Your Intelligent Job Matcher</p>", unsafe_allow_html=True)
+st.markdown("<p style='margin-top: -15px; margin-bottom: 30px;'>Your Intelligent Job Matcher</p>", unsafe_allow_html=True)
 
 with st.container():
     st.markdown('<div class="main-container">', unsafe_allow_html=True)
@@ -201,7 +217,7 @@ with st.container():
                 if not top_jobs:
                     st.warning("No specific listings found. Try changing the role.")
                 else:
-                    st.markdown("### ✨ Top 10 Direct Matches")
+                    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>✨ Top 10 Direct Matches</h3>", unsafe_allow_html=True)
                     for job in top_jobs:
                         source_domain = job['link'].split('/')[2].replace('www.', '')
                         
