@@ -9,10 +9,7 @@ st.set_page_config(page_title="TagBuddy: Your Best Job Match Maker", page_icon="
 
 st.markdown("""
     <style>
-    /* PREMIUM WALLPAPER WITH READABILITY OVERLAY 
-       We use a linear-gradient overlay (rgba 0,0,0,0.5) on top of the image 
-       to darken it slightly, ensuring white text is always readable.
-    */
+    /* PREMIUM WALLPAPER WITH READABILITY OVERLAY */
     .stApp {
         background: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.6)),
                     url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop');
@@ -26,20 +23,20 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* UPPER SECTION: Darker Glass for Maximum Contrast */
+    /* UPPER SECTION: Glass Container */
     .main-container {
-        background: rgba(30, 41, 59, 0.6); /* Slightly more transparent to let bg show */
+        background: rgba(30, 41, 59, 0.6);
         padding: 40px;
         border-radius: 15px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 30px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(10px); /* Adds premium blur effect */
+        backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
     }
 
-    /* TEXT COLORS - FORCE WHITE FOR INPUTS */
-    h1 { color: #ffffff !important; font-weight: 800; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    /* TEXT COLORS - FORCE WHITE FOR HEADINGS & INPUTS */
+    h1, h2, h3 { color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     p { color: #e2e8f0 !important; font-size: 16px; }
     
     /* Force specific input labels to be white */
@@ -50,9 +47,7 @@ st.markdown("""
     }
     
     /* Upload Box Styling */
-    .stFileUploader {
-        padding-top: 15px;
-    }
+    .stFileUploader { padding-top: 15px; }
     .stFileUploader > div > div {
          background-color: rgba(255,255,255,0.05);
          border: 1px dashed rgba(255,255,255,0.3);
@@ -60,7 +55,7 @@ st.markdown("""
     
     /* BUTTON STYLING */
     .stButton > button {
-        background-color: #10b981; /* Matching the green accent */
+        background-color: #10b981;
         color: white;
         font-weight: bold;
         padding: 12px 30px;
@@ -76,22 +71,18 @@ st.markdown("""
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
     }
 
-    /* ------------------------------------------- */
     /* SEARCH RESULTS: White Card + Green Border */
-    /* ------------------------------------------- */
     .job-card {
-        background-color: rgba(255, 255, 255, 0.95) !important; /* Slight transparency for premium feel */
+        background-color: rgba(255, 255, 255, 0.95) !important;
         padding: 25px;
         border-radius: 12px;
         margin-bottom: 20px;
-        border-left: 6px solid #10b981; /* Fresh Green */
+        border-left: 6px solid #10b981;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
         transition: transform 0.2s;
         backdrop-filter: blur(5px);
     }
-    .job-card:hover {
-        transform: translateY(-3px);
-    }
+    .job-card:hover { transform: translateY(-3px); }
     
     .job-title { 
         color: #1e293b !important; 
@@ -129,7 +120,6 @@ st.markdown("""
     }
     .apply-btn:hover { background-color: #059669; }
     
-    /* Alert Messages */
     .stAlert { background-color: rgba(255,255,255,0.95); color: #000; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -176,7 +166,22 @@ with st.container():
     
     c1, c2 = st.columns(2)
     with c1:
-        role = st.selectbox("Target Role", ["Corporate Strategy", "Product Manager", "Strategy Consultant", "Business Analyst", "Data Scientist"])
+        # UPDATED ROLE LIST
+        role = st.selectbox("Target Role", [
+            "Corporate Strategy", 
+            "Product Manager", 
+            "Strategy Consultant", 
+            "Management Trainee",
+            "Operations Associate",
+            "Planning Associate",
+            "Area Sales Manager",
+            "SAP Functional Consultant",
+            "SAP Technical Consultant",
+            "Business Analyst",
+            "Data Scientist",
+            "MBA Freshers Open Roles",
+            "BTech Freshers Open Roles"
+        ])
     with c2:
         exp = st.selectbox("Experience", ["0-1 Years", "1-3 Years", "3-5 Years", "5-8 Years", "8+ Years"])
     
@@ -187,10 +192,8 @@ with st.container():
             st.error("Please ensure keys are entered and resume is uploaded.")
         else:
             with st.spinner("Analyzing resume and scanning top platforms..."):
-                # 1. Get Queries
                 queries = get_smart_queries(role, exp, gemini_key)
                 
-                # 2. Search
                 all_results = []
                 headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
                 
@@ -199,7 +202,6 @@ with st.container():
                     results = res.json().get('organic', [])
                     all_results.extend(results)
                 
-                # 3. Filter
                 seen_links = set()
                 top_jobs = []
                 
@@ -211,13 +213,13 @@ with st.container():
                     if len(top_jobs) >= 10:
                         break
                 
-                # 4. Display Results
                 st.markdown('</div>', unsafe_allow_html=True) # Close container
                 
                 if not top_jobs:
                     st.warning("No specific listings found. Try changing the role.")
                 else:
-                    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px;'>✨ Top 10 Direct Matches</h3>", unsafe_allow_html=True)
+                    # FIXED: Added explicit white color styling to this Header
+                    st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px; color: white !important;'>✨ Top 10 Direct Matches</h3>", unsafe_allow_html=True)
                     for job in top_jobs:
                         source_domain = job['link'].split('/')[2].replace('www.', '')
                         
