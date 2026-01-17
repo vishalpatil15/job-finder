@@ -4,70 +4,89 @@ import requests
 from pypdf import PdfReader
 import json
 
-# 1. SETUP PAGE
-st.set_page_config(page_title="Vishal's Job Matcher", layout="wide")
-st.title("🎯 Strategy & Product Job Finder")
-st.markdown("---")
+# --- 1. PAGE CONFIG & CUSTOM STYLING ---
+st.set_page_config(page_title="Vishal's Career Dashboard", layout="wide")
 
-# 2. SIDEBAR FOR API KEYS
+# Custom CSS for the "Actual Webpage" look
+st.markdown("""
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    .job-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border-left: 5px solid #2e7d32;
+        transition: transform 0.2s;
+    }
+    .job-card:hover {
+        transform: scale(1.01);
+    }
+    .apply-btn {
+        background-color: #2e7d32;
+        color: white !important;
+        padding: 8px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("💼 Strategy & Product Matcher")
+st.markdown("Finding the top 10 opportunities for your profile...")
+
+# --- 2. SIDEBAR ---
 with st.sidebar:
-    st.header("🔑 API Setup")
+    st.header("🔑 API Access")
     gemini_key = st.text_input("Gemini API Key", type="password")
     serper_key = st.text_input("Serper API Key", type="password")
-    st.info("Get keys from Google AI Studio and Serper.dev")
 
-# 3. HELPER FUNCTIONS
+# --- 3. LOGIC FUNCTIONS ---
 def get_pdf_text(uploaded_file):
-    text = ""
-    pdf_reader = PdfReader(uploaded_file)
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+    reader = PdfReader(uploaded_file)
+    return "".join([page.extract_text() for page in reader.pages])
 
-def get_search_queries(resume_text, api_key):
+def get_smart_queries(resume_text, api_key):
     genai.configure(api_key=api_key)
-    # Using the most stable 2026 model: Gemini 2.5 Flash
-    model = genai.GenerativeModel('gemini-2.5-flash') 
-    
-    prompt = f"""
-    Analyze this resume and generate 3 specific Google search strings.
-    Target roles: Corporate Strategy, Strategy Consulting, or Product Management.
-    Location: Focus on Pune and Bangalore.
-    Format: ONLY a JSON list of strings.
-    Example: ["site:linkedin.com/jobs 'Strategy Analyst' Pune"]
-    Resume text: {resume_text[:4000]}
-    """
-    
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    prompt = f"Resume: {resume_text[:3000]}. Based on this, give me 3 optimized Google search strings to find high-level Strategy or Product jobs in Pune/Bangalore on LinkedIn or Naukri. Return ONLY a JSON list."
     response = model.generate_content(prompt)
-    clean_json = response.text.strip().replace('```json', '').replace('```', '')
-    return json.loads(clean_json)
+    return json.loads(response.text.strip().replace('```json', '').replace('```', ''))
 
-# 4. MAIN INTERFACE
-uploaded_file = st.file_uploader("Upload Resume (PDF)", type="pdf")
+# --- 4. MAIN UI ---
+uploaded_file = st.file_uploader("Drop your resume here", type="pdf")
 
 if uploaded_file and gemini_key and serper_key:
-    if st.button("Find Matching Jobs"):
-        with st.spinner("Analyzing profile and searching for jobs..."):
-            try:
-                # Step A: Read PDF
-                resume_content = get_pdf_text(uploaded_file)
-                
-                # Step B: Get Queries
-                queries = get_search_queries(resume_content, gemini_key)
-                
-                # Step C: Search via Serper
-                headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
-                for q in queries:
-                    st.write(f"🔍 Searching: {q}")
-                    res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q})
-                    results = res.json().get('organic', [])
-                    
-                    for job in results:
-                        with st.container():
-                            st.success(f"**{job['title']}**")
-                            st.write(f"Source: {job.get('snippet', 'No description available')}")
-                            st.markdown(f"[Apply Direct on {job.get('source', 'Link')}]({job['link']})")
-                            st.divider()
-            except Exception as e:
-                st.error(f"Something went wrong: {e}")
-                st.info("Try updating your Gemini model name to 'gemini-2.5-flash-lite' if this persists.")
+    if st.button("Generate My Top 10"):
+        with st.spinner("Scraping platforms for matches..."):
+            resume_text = get_pdf_text(uploaded_file)
+            queries = get_smart_queries(resume_text, gemini_key)
+            
+            all_jobs = []
+            headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
+            
+            # Fetch results from all queries
+            for q in queries:
+                res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
+                all_jobs.extend(res.json().get('organic', []))
+            
+            # 5. DISPLAY TOP 10 ONLY
+            top_10 = all_jobs[:10]
+            
+            if not top_10:
+                st.warning("No fresh openings found. Try refining your resume keywords.")
+            else:
+                for job in top_10:
+                    st.markdown(f"""
+                        <div class="job-card">
+                            <h3 style='margin-top:0;'>{job['title']}</h3>
+                            <p style='color: #666;'>{job.get('snippet', 'Check link for description...')[:200]}...</p>
+                            <p><b>Source:</b> {job.get('link', '').split('/')[2]}</p>
+                            <a class="apply-btn" href="{job['link']}" target="_blank">View & Apply Now</a>
+                        </div>
+                    """, unsafe_allow_html=True)
