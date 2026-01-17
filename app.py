@@ -43,8 +43,8 @@ st.markdown("Finding the top 10 opportunities for your profile...")
 # --- 2. SIDEBAR ---
 with st.sidebar:
     st.header("🔑 API Access")
-    gemini_key = st.text_input("Gemini API Key", type="password")
-    serper_key = st.text_input("Serper API Key", type="password")
+    gemini_key = st.secrets.get("GEMINI_API_KEY") or st.sidebar.text_input("Gemini API Key", type="password")
+    serper_key = st.secrets.get("SERPER_API_KEY") or st.sidebar.text_input("Serper API Key", type="password")
 
 # --- 3. LOGIC FUNCTIONS ---
 def get_pdf_text(uploaded_file):
