@@ -9,96 +9,112 @@ st.set_page_config(page_title="TagBuddy: Your Best Job Match Maker", page_icon="
 
 st.markdown("""
     <style>
-    /* Professional Dark Background */
+    /* CLASSY SIMPLE BACKGROUND */
     .stApp {
-        background: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop');
-        background-size: cover;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         background-attachment: fixed;
     }
     
-    /* Hide Default Branding */
+    /* Hide Branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* UPPER SECTION: Glassmorphism Container */
+    /* UPPER SECTION: Darker Glass for Maximum Contrast */
     .main-container {
-        background: rgba(0, 0, 0, 0.75); /* Darker for better white text contrast */
+        background: rgba(30, 41, 59, 0.7);
         padding: 40px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
 
-    /* UPPER SECTION: Text Colors (All White) */
-    h1 { color: #ffffff !important; text-shadow: 0px 2px 4px rgba(0,0,0,0.5); }
-    h2, h3 { color: #ffffff !important; }
-    p { color: #f0f0f0 !important; font-size: 16px; }
+    /* TEXT COLORS - FORCE WHITE FOR INPUTS */
+    h1 { color: #ffffff !important; font-weight: 700; letter-spacing: -1px; }
+    p { color: #cbd5e1 !important; font-size: 16px; }
     
-    /* Input Labels - Force White */
-    label { 
-        color: #ffffff !important; 
-        font-weight: 600 !important; 
-        font-size: 16px !important; 
+    /* Force specific input labels to be white */
+    .stSelectbox label, .stFileUploader label {
+        color: #ffffff !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
     }
     
-    /* File Uploader Text */
-    .stFileUploader label { color: white !important; }
-    .stFileUploader div { color: white !important; }
+    /* Upload Box Styling */
+    .stFileUploader {
+        padding-top: 15px;
+    }
     
+    /* BUTTON STYLING */
+    .stButton > button {
+        background-color: #3b82f6; /* Classy Blue */
+        color: white;
+        font-weight: bold;
+        padding: 12px 30px;
+        border-radius: 8px;
+        border: none;
+        width: 100%;
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        background-color: #2563eb;
+        transform: translateY(-2px);
+    }
+
     /* ------------------------------------------- */
     /* SEARCH RESULTS: White Card + Green Border */
     /* ------------------------------------------- */
     .job-card {
-        background-color: #ffffff !important; /* Pure White Background */
+        background-color: #ffffff !important;
         padding: 25px;
         border-radius: 12px;
         margin-bottom: 20px;
-        border-left: 8px solid #2e7d32; /* Success Green */
-        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        border-left: 6px solid #10b981; /* Fresh Green */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s;
     }
     .job-card:hover {
         transform: translateY(-3px);
     }
     
-    /* Result Text Colors (Black/Dark Grey for readability on white) */
     .job-title { 
-        color: #000000 !important; 
-        font-size: 22px !important; 
+        color: #1e293b !important; 
+        font-size: 20px !important; 
         font-weight: 800 !important; 
         margin-bottom: 8px !important; 
     }
     .job-source { 
-        color: #2e7d32 !important; 
+        color: #10b981 !important; 
         font-weight: 700 !important; 
-        font-size: 14px !important; 
+        font-size: 13px !important; 
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 5px;
     }
     .job-snippet { 
-        color: #333333 !important; 
+        color: #475569 !important; 
         font-size: 15px !important; 
         line-height: 1.5; 
         margin-top: 10px !important; 
     }
     
-    /* Apply Button */
+    /* Apply Button inside card */
     .apply-btn {
-        background-color: #2e7d32;
+        background-color: #10b981;
         color: white !important;
         padding: 10px 25px;
         border-radius: 6px;
         text-decoration: none;
         display: inline-block;
-        font-weight: bold;
+        font-weight: 600;
         margin-top: 15px;
+        font-size: 14px;
     }
-    .apply-btn:hover { background-color: #1b5e20; }
+    .apply-btn:hover { background-color: #059669; }
     
-    /* Error/Success Messages */
-    .stAlert { color: black; }
+    /* Alert Messages */
+    .stAlert { background-color: rgba(255,255,255,0.9); color: #000; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -136,8 +152,8 @@ def get_smart_queries(role, exp, api_key):
         return [f"site:linkedin.com/jobs/view {role} Pune", f"site:naukri.com/job-listings {role} Pune"]
 
 # --- 4. MAIN APP ---
-st.title("🏷️ TagBuddy: Your Best Job Match Maker")
-st.markdown("Upload your resume and get the top 10 direct job links.")
+st.title("🏷️ TagBuddy")
+st.markdown("<p style='margin-top: -15px; margin-bottom: 20px;'>Your Intelligent Job Matcher</p>", unsafe_allow_html=True)
 
 with st.container():
     st.markdown('<div class="main-container">', unsafe_allow_html=True)
@@ -154,7 +170,7 @@ with st.container():
         if not uploaded_file or not gemini_key or not serper_key:
             st.error("Please ensure keys are entered and resume is uploaded.")
         else:
-            with st.spinner("Scanning LinkedIn, Naukri & IIMJobs for individual posts..."):
+            with st.spinner("Analyzing resume and scanning top platforms..."):
                 # 1. Get Queries
                 queries = get_smart_queries(role, exp, gemini_key)
                 
@@ -180,7 +196,7 @@ with st.container():
                         break
                 
                 # 4. Display Results
-                st.markdown('</div>', unsafe_allow_html=True) # Close the glass container before showing cards
+                st.markdown('</div>', unsafe_allow_html=True) # Close container
                 
                 if not top_jobs:
                     st.warning("No specific listings found. Try changing the role.")
