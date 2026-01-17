@@ -5,7 +5,7 @@ from pypdf import PdfReader
 import json
 
 # --- 1. PAGE CONFIG & HIGH-CONTRAST UI ---
-st.set_page_config(page_title="CareerFlow | Direct Job Matcher", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="TagBuddy| Your Best Job Matcher", page_icon="🎯", layout="wide")
 
 st.markdown("""
     <style>
