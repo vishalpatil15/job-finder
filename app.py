@@ -9,10 +9,11 @@ st.set_page_config(page_title="TagBuddy: Your Best Job Match Maker", page_icon="
 
 st.markdown("""
     <style>
-    /* PREMIUM WALLPAPER WITH READABILITY OVERLAY */
+    /* PREMIUM "EXTRAORDINARY" WALLPAPER */
+    /* Using a stunning abstract liquid background with a dark overlay for readability */
     .stApp {
-        background: linear-gradient(rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.6)),
-                    url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop');
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+                    url('https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=2070&auto=format&fit=crop');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -25,18 +26,18 @@ st.markdown("""
 
     /* UPPER SECTION: Glass Container */
     .main-container {
-        background: rgba(30, 41, 59, 0.6);
+        background: rgba(20, 20, 30, 0.7); /* Slightly darker for better contrast with new bg */
         padding: 40px;
         border-radius: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         margin-bottom: 30px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
 
     /* TEXT COLORS - FORCE WHITE FOR HEADINGS & INPUTS */
-    h1, h2, h3 { color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    h1, h2, h3 { color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     p { color: #e2e8f0 !important; font-size: 16px; }
     
     /* Force specific input labels to be white */
@@ -78,7 +79,7 @@ st.markdown("""
         border-radius: 12px;
         margin-bottom: 20px;
         border-left: 6px solid #10b981;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         transition: transform 0.2s;
         backdrop-filter: blur(5px);
     }
@@ -120,7 +121,19 @@ st.markdown("""
     }
     .apply-btn:hover { background-color: #059669; }
     
-    .stAlert { background-color: rgba(255,255,255,0.95); color: #000; border-radius: 10px; }
+    /* ERROR & WARNING MESSAGES - FORCE READABILITY */
+    .stAlert {
+        background-color: #ffffff !important; /* White background */
+        color: #1e293b !important; /* Dark text */
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    /* Specific styling for error messages */
+    div[data-baseweb="notification"][kind="error"] {
+        background-color: #fee2e2 !important; /* Light red bg */
+        color: #991b1b !important; /* Dark red text */
+        border-left: 6px solid #ef4444 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -158,15 +171,21 @@ def get_smart_queries(role, exp, api_key):
         return [f"site:linkedin.com/jobs/view {role} Pune", f"site:naukri.com/job-listings {role} Pune"]
 
 # --- 4. MAIN APP ---
-st.title("🏷️ TagBuddy")
-st.markdown("<p style='margin-top: -15px; margin-bottom: 30px;'>Your Intelligent Job Matcher</p>", unsafe_allow_html=True)
+# LOGO & TITLE SECTION
+col1, col2 = st.columns([1, 5])
+with col1:
+    # Placeholder Logo - Replace this URL with your own hosted logo image
+    st.image("https://cdn-icons-png.flaticon.com/512/2950/2950637.png", width=80)
+with col2:
+    st.title("TagBuddy")
+    st.markdown("<p style='margin-top: -15px; margin-bottom: 30px;'>Your Intelligent Job Matcher</p>", unsafe_allow_html=True)
+
 
 with st.container():
     st.markdown('<div class="main-container">', unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
     with c1:
-        # UPDATED ROLE LIST
         role = st.selectbox("Target Role", [
             "Corporate Strategy", 
             "Product Manager", 
@@ -185,11 +204,21 @@ with st.container():
     with c2:
         exp = st.selectbox("Experience", ["0-1 Years", "1-3 Years", "3-5 Years", "5-8 Years", "8+ Years"])
     
-    uploaded_file = st.file_uploader("Upload Resume (PDF)", type="pdf")
+    # ADDED RED ASTERISK FOR MANDATORY FIELD
+    st.markdown("""
+        <style>
+        .asterisk { color: #ef4444; font-weight: bold; margin-left: 4px; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # We use a little hack to add the asterisk since st.file_uploader label doesn't support HTML directly in the label argument
+    st.markdown('<label style="color:white; font-size:1.1rem; font-weight:600;">Upload Resume (PDF)<span class="asterisk">*</span></label>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("", type="pdf", label_visibility="collapsed")
     
     if st.button("🚀 Find Direct Jobs"):
         if not uploaded_file or not gemini_key or not serper_key:
-            st.error("Please ensure keys are entered and resume is uploaded.")
+            # FIXED ERROR MESSAGE COLOR
+            st.error("Please ensure API keys are entered and a Resume is uploaded.")
         else:
             with st.spinner("Analyzing resume and scanning top platforms..."):
                 queries = get_smart_queries(role, exp, gemini_key)
@@ -218,7 +247,6 @@ with st.container():
                 if not top_jobs:
                     st.warning("No specific listings found. Try changing the role.")
                 else:
-                    # FIXED: Added explicit white color styling to this Header
                     st.markdown("<h3 style='margin-top: 30px; margin-bottom: 20px; color: white !important;'>✨ Top 10 Direct Matches</h3>", unsafe_allow_html=True)
                     for job in top_jobs:
                         source_domain = job['link'].split('/')[2].replace('www.', '')
