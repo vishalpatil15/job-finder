@@ -5,29 +5,29 @@ from pypdf import PdfReader
 import json
 
 # 1. SETUP PAGE
-st.set_page_config(page_title="Vishal's Career Matcher", layout="wide")
+st.set_page_config(page_title="Vishal's Job Matcher", layout="wide")
 st.title("🎯 Strategy & Product Job Finder")
 st.markdown("---")
 
-# 2. SIDEBAR
+# 2. SIDEBAR FOR API KEYS
 with st.sidebar:
     st.header("🔑 API Setup")
     gemini_key = st.text_input("Gemini API Key", type="password")
     serper_key = st.text_input("Serper API Key", type="password")
     st.info("Get keys from Google AI Studio and Serper.dev")
 
-# 3. HELPER FUNCTIONS (This is where get_search_queries lives!)
-def get_pdf_text(pdf_docs):
+# 3. HELPER FUNCTIONS
+def get_pdf_text(uploaded_file):
     text = ""
-    pdf_reader = PdfReader(pdf_docs)
+    pdf_reader = PdfReader(uploaded_file)
     for page in pdf_reader.pages:
         text += page.extract_text()
     return text
 
 def get_search_queries(resume_text, api_key):
     genai.configure(api_key=api_key)
-    # Using the standard 2026 model: Gemini 3 Flash
-    model = genai.GenerativeModel('gemini-3-flash') 
+    # Using the most stable 2026 model: Gemini 2.5 Flash
+    model = genai.GenerativeModel('gemini-2.5-flash') 
     
     prompt = f"""
     Analyze this resume and generate 3 specific Google search strings.
@@ -39,7 +39,6 @@ def get_search_queries(resume_text, api_key):
     """
     
     response = model.generate_content(prompt)
-    # Cleaning the response to ensure it's pure JSON
     clean_json = response.text.strip().replace('```json', '').replace('```', '')
     return json.loads(clean_json)
 
@@ -48,12 +47,12 @@ uploaded_file = st.file_uploader("Upload Resume (PDF)", type="pdf")
 
 if uploaded_file and gemini_key and serper_key:
     if st.button("Find Matching Jobs"):
-        with st.spinner("Analyzing your profile for Strategy & Product roles..."):
-            # Step A: Read PDF
-            resume_content = get_pdf_text(uploaded_file)
-            
-            # Step B: Get Queries from Gemini
+        with st.spinner("Analyzing profile and searching for jobs..."):
             try:
+                # Step A: Read PDF
+                resume_content = get_pdf_text(uploaded_file)
+                
+                # Step B: Get Queries
                 queries = get_search_queries(resume_content, gemini_key)
                 
                 # Step C: Search via Serper
@@ -66,8 +65,9 @@ if uploaded_file and gemini_key and serper_key:
                     for job in results:
                         with st.container():
                             st.success(f"**{job['title']}**")
-                            st.write(f"Source: {job.get('link', 'Link not found')}")
-                            st.markdown(f"[Apply Now]({job['link']})")
+                            st.write(f"Source: {job.get('snippet', 'No description available')}")
+                            st.markdown(f"[Apply Direct on {job.get('source', 'Link')}]({job['link']})")
                             st.divider()
             except Exception as e:
                 st.error(f"Something went wrong: {e}")
+                st.info("Try updating your Gemini model name to 'gemini-2.5-flash-lite' if this persists.")
