@@ -1,12 +1,3 @@
-It looks like the previous code cut off at the very end, which caused that "unterminated string" error (basically, the computer was still waiting for the closing quotes `"""`).
-
-Here is the **Complete, Fixed Code** for **TagBuddy Phase 2**. I have double-checked that all sections are closed properly.
-
-### 💎 TagBuddy Phase 2: Complete Code
-
-Replace your entire `app.py` with this.
-
-```python
 import streamlit as st
 import google.generativeai as genai
 import requests
@@ -15,7 +6,7 @@ import json
 import re
 
 # --- 1. PAGE CONFIG & UI ---
-st.set_page_config(page_title="TagBuddy: Agentic Job Hunter", page_icon="🕵️", layout="wide")
+st.set_page_config(page_title="TagBuddy Phase 2", page_icon="🕵️", layout="wide")
 
 st.markdown("""
     <style>
@@ -41,6 +32,7 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 30px;
         backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
 
     /* TEXT COLORS */
@@ -93,9 +85,9 @@ st.markdown("""
     }
 
     /* Typography inside cards */
-    .card-title { color: #1e293b; font-size: 18px; font-weight: 800; margin-bottom: 5px; }
-    .card-meta { color: #64748b; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
-    .card-snippet { color: #334155; font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
+    .card-title { color: #1e293b !important; font-size: 18px !important; font-weight: 800; margin-bottom: 5px; }
+    .card-meta { color: #64748b !important; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
+    .card-snippet { color: #334155 !important; font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
     
     /* Email Highlight Chip */
     .email-chip {
@@ -112,8 +104,8 @@ st.markdown("""
     }
     
     /* Links */
-    a.std-link { color: #059669; font-weight: bold; text-decoration: none; }
-    a.email-link { color: #7c3aed; font-weight: bold; text-decoration: none; }
+    a.std-link { color: #059669 !important; font-weight: bold; text-decoration: none; }
+    a.email-link { color: #7c3aed !important; font-weight: bold; text-decoration: none; }
     
     /* TABS */
     .stTabs [data-baseweb="tab-list"] { gap: 24px; }
@@ -281,5 +273,3 @@ with st.container():
                 
                 if email_count == 0:
                     st.info("No direct email posts found right now. Try a broader role name.")
-
-```
