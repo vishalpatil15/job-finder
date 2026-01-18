@@ -4,7 +4,8 @@ import requests
 from pypdf import PdfReader
 import json
 import re
-import html  # Added for safety cleaning
+import html
+import urllib.parse
 
 # --- 1. PAGE CONFIG & ULTRA-MODERN UI ---
 st.set_page_config(page_title="TagBuddy: AI Job Architect", page_icon="🧬", layout="wide")
@@ -30,22 +31,32 @@ st.markdown("""
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding-top: 3rem;
+        padding-top: 2rem;
         margin-bottom: 2rem;
     }
     
-    .logo-img {
-        width: 120px;
-        margin-bottom: 15px;
-        filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5));
-        transition: transform 0.3s ease;
+    /* DYNAMIC LAMP LOGO STYLING */
+    .lamp-container {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, rgba(0,0,0,0) 70%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 10px;
     }
-    .logo-img:hover { transform: scale(1.05); }
+    .lamp-img {
+        width: 120px;
+        height: auto;
+        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+    }
 
+    /* TYPOGRAPHY */
     h1 { 
         color: #ffffff !important; 
         font-weight: 800 !important;
-        font-size: 4rem !important;
+        font-size: 3.5rem !important;
         letter-spacing: -2px;
         margin: 0 !important;
         text-align: center;
@@ -55,11 +66,11 @@ st.markdown("""
     }
     p.subtitle { 
         color: #94a3b8 !important; 
-        font-size: 1.3rem !important; 
+        font-size: 1.2rem !important; 
         text-align: center;
         font-weight: 300;
         max-width: 600px;
-        margin-top: 10px !important;
+        margin-top: 5px !important;
     }
 
     /* SEARCH CONTAINER */
@@ -108,6 +119,7 @@ st.markdown("""
         position: relative;
         border: 1px solid rgba(255,255,255,0.1);
         transition: transform 0.2s;
+        overflow: hidden; /* Ensures content stays inside */
     }
     .job-card:hover { transform: translateY(-3px); }
 
@@ -155,6 +167,7 @@ st.markdown("""
         font-size: 12px;
         color: #475569;
         word-break: break-all;
+        user-select: all; /* Makes it easy to select */
     }
 
     /* TABS */
@@ -245,10 +258,12 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
 
 # --- 4. MAIN LAYOUT ---
 
-# CENTERED HEADER
+# CENTERED HEADER WITH DYNAMIC LAMP LOGO
 st.markdown("""
     <div class="header-container">
-        <img src="https://cdn-icons-png.flaticon.com/512/12392/12392769.png" class="logo-img">
+        <div class="lamp-container">
+            <img src="https://media.tenor.com/J3iM0i_W8QoAAAAi/lamp-light.gif" class="lamp-img">
+        </div>
         <h1>TagBuddy</h1>
         <p class="subtitle">Agentic Job Intelligence. Resume Analysis. Direct Matches.</p>
     </div>
@@ -327,12 +342,16 @@ with st.container():
                     if score >= 80: badge_class = "high-match"
                     elif score < 50: badge_class = "low-match"
 
-                    # CLEAN DATA FOR HTML
+                    # --- KEY FIX: SANITIZE EVERYTHING ---
+                    # We use html.escape to make sure no weird characters break the UI
                     clean_title = html.escape(job.get('title', 'Job Role'))
                     clean_snippet = html.escape(job.get('snippet', ''))
                     clean_source = html.escape(job.get('source', 'Job Portal'))
-                    link = job['link']
-
+                    
+                    # Safe URL encoding
+                    raw_link = job['link']
+                    
+                    # We render the card HTML carefully
                     st.markdown(f"""
                     <div class="job-card">
                         <div class="match-badge {badge_class}">⚡ {score}% Match</div>
@@ -341,9 +360,9 @@ with st.container():
                         <div class="job-snippet">{clean_snippet}</div>
                         
                         <div style="margin-top:20px;">
-                            <a href="{link}" target="_blank" class="apply-link">Apply Now ➜</a>
+                            <a href="{raw_link}" target="_blank" class="apply-link">Apply Now ➜</a>
                         </div>
-                        <div class="share-box">🔗 {link}</div>
+                        <div class="share-box">🔗 {raw_link}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -358,6 +377,7 @@ with st.container():
                         
                         clean_title = html.escape(post.get('title', 'Social Post'))
                         clean_snippet = html.escape(post.get('snippet', ''))
+                        raw_link = post['link']
                         
                         email_chips = "".join([f"<span style='background:#ede9fe; color:#6d28d9; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold;'>✉️ {e}</span>" for e in found_emails])
                         
@@ -367,7 +387,7 @@ with st.container():
                             <div class="job-source">🔗 Social Post (Last 48 Hours)</div>
                             <div style="margin-bottom:15px;">{email_chips}</div>
                             <div class="job-snippet">{clean_snippet}</div>
-                            <a href="{post['link']}" target="_blank" style="color:#8b5cf6; font-weight:bold; text-decoration:none;">View Post ➜</a>
+                            <a href="{raw_link}" target="_blank" style="color:#8b5cf6; font-weight:bold; text-decoration:none;">View Post ➜</a>
                         </div>
                         """, unsafe_allow_html=True)
                         email_count += 1
