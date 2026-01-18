@@ -1,6 +1,4 @@
-Here's the **completely revamped code** with all your requested changes:
 
-```python
 import streamlit as st
 import google.generativeai as genai
 import requests
