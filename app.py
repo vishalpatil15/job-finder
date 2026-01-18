@@ -4,272 +4,265 @@ import requests
 from pypdf import PdfReader
 import json
 import re
+from datetime import datetime
 
-# --- 1. PAGE CONFIG & UI ---
-st.set_page_config(page_title="TagBuddy Phase 2", page_icon="🕵️", layout="wide")
+# --- 1. PAGE CONFIG & GOOGLE RESEARCH UI ---
+st.set_page_config(page_title="Language Explorer | Job Hunter", page_icon="🌐", layout="wide")
 
 st.markdown("""
     <style>
-    /* PREMIUM WALLPAPER */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+
+    /* Global Theme */
     .stApp {
-        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-                    url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
+        background-color: #000000;
+        background-image: radial-gradient(circle at 50% 50%, #0a192f 0%, #000000 100%);
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
     }
-    
-    /* Hide Branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
 
-    /* UPPER SECTION: Glass Container */
-    .main-container {
-        background: rgba(20, 20, 30, 0.8);
-        padding: 40px;
-        border-radius: 15px;
+    /* Hide Streamlit Elements */
+    #MainMenu, footer, header {visibility: hidden;}
+    .block-container {padding-top: 2rem;}
+
+    /* Navigation Bar */
+    .nav-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 80px;
+    }
+
+    /* Globe Background Simulation */
+    .globe-overlay {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 600px;
+        height: 600px;
+        background: url('https://www.transparenttextures.com/patterns/stardust.png');
+        opacity: 0.3;
+        z-index: -1;
+        mask-image: radial-gradient(circle, black 30%, transparent 70%);
+    }
+
+    /* Hero Section */
+    .hero-title {
+        font-size: 64px;
+        font-weight: 300;
+        text-align: center;
+        margin-bottom: 10px;
+        letter-spacing: -1px;
+    }
+    .hero-subtitle {
+        color: #94a3b8;
+        text-align: center;
+        font-size: 16px;
+        margin-bottom: 40px;
+    }
+
+    /* Search Box Wrapper */
+    .search-container {
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    /* CUSTOM INPUT STYLING */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] {
+        background-color: transparent !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        border-radius: 30px !important;
+        color: white !important;
+        padding: 10px 25px !important;
+    }
+
+    /* Job Card Styling */
+    .result-card {
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 30px;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-    }
-
-    /* TEXT COLORS */
-    h1, h2, h3 { color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-    p { color: #cbd5e1 !important; font-size: 16px; }
-    
-    /* Input Labels */
-    .stSelectbox label, .stFileUploader label {
-        color: #ffffff !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
-    }
-    
-    /* BUTTON STYLING */
-    .stButton > button {
-        background-color: #3b82f6;
-        color: white;
-        font-weight: bold;
-        padding: 12px 30px;
-        border-radius: 8px;
-        border: none;
-        width: 100%;
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 16px;
         transition: all 0.3s ease;
     }
-    .stButton > button:hover {
-        background-color: #2563eb;
-        transform: translateY(-2px);
+    .result-card:hover {
+        border-color: #3b82f6;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #3b82f6;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .card-link {
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 18px;
+        font-weight: 500;
+    }
+    .card-snippet {
+        color: #94a3b8;
+        font-size: 14px;
+        margin: 12px 0;
+        line-height: 1.6;
     }
 
-    /* --- CARD STYLES --- */
-    
-    /* TYPE 1: Standard Job Card (Green Border) */
-    .job-card {
-        background-color: rgba(255, 255, 255, 0.95);
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 15px;
-        border-left: 6px solid #10b981;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    /* TYPE 2: Hidden Email Card (Purple Border) */
-    .email-card {
-        background-color: #f8fafc;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 15px;
-        border-left: 6px solid #8b5cf6;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    /* Typography inside cards */
-    .card-title { color: #1e293b !important; font-size: 18px !important; font-weight: 800; margin-bottom: 5px; }
-    .card-meta { color: #64748b !important; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
-    .card-snippet { color: #334155 !important; font-size: 14px; line-height: 1.5; margin-bottom: 15px; }
-    
-    /* Email Highlight Chip */
-    .email-chip {
-        background-color: #ede9fe;
-        color: #6d28d9;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 13px;
-        border: 1px solid #ddd6fe;
-        display: inline-block;
-        margin-top: 5px;
-        margin-right: 5px;
-    }
-    
-    /* Links */
-    a.std-link { color: #059669 !important; font-weight: bold; text-decoration: none; }
-    a.email-link { color: #7c3aed !important; font-weight: bold; text-decoration: none; }
-    
-    /* TABS */
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: rgba(255,255,255,0.1);
+    /* Copy Button UI */
+    .copy-btn {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #94a3b8;
+        padding: 4px 12px;
         border-radius: 4px;
-        color: white;
-        font-weight: bold;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #3b82f6;
-        color: white;
+        font-size: 12px;
+        cursor: pointer;
     }
     
-    /* Error Messages */
-    .stAlert { background-color: #fff; color: #000; }
+    /* Stats Section (Bottom Right) */
+    .stats-panel {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        text-align: right;
+        font-size: 11px;
+        color: #64748b;
+        line-height: 1.8;
+    }
     </style>
+    <div class="globe-overlay"></div>
     """, unsafe_allow_html=True)
 
-# --- 2. SECRETS ---
+# --- 2. LOGIC & API SETUP ---
 gemini_key = st.secrets.get("GEMINI_API_KEY") or st.sidebar.text_input("Gemini Key", type="password")
 serper_key = st.secrets.get("SERPER_API_KEY") or st.sidebar.text_input("Serper Key", type="password")
 
-# --- 3. HELPER FUNCTIONS ---
-def get_pdf_text(file):
-    reader = PdfReader(file)
-    return " ".join([p.extract_text() for p in reader.pages])
+def get_recent_jobs(role, api_key, search_type="standard"):
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    if search_type == "standard":
+        prompt = f"Generate 3 Google search queries for latest {role} jobs in India. Focus on linkedin.com/jobs/view. Return ONLY a JSON list of strings."
+    else:
+        prompt = f"Generate 3 Google search queries to find LinkedIn posts from the last 24 hours where HRs share email IDs for {role} hiring. Return ONLY a JSON list of strings."
+    
+    try:
+        response = model.generate_content(prompt)
+        # Cleaning JSON formatting
+        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+        return json.loads(clean_text)
+    except:
+        return [f'"{role}" hiring email 2024']
 
 def extract_emails(text):
-    """Finds emails in text using Regex"""
-    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = re.findall(email_pattern, text)
-    return list(set(emails))
+    return list(set(re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)))
 
-# --- AGENT 1: Standard Link Hunter ---
-def get_standard_queries(role, exp, api_key):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    prompt = f"""
-    Generate 3 Google search queries to find formal job applications for:
-    Role: {role}, Experience: {exp}, Location: India.
-    Rules: Use 'site:linkedin.com/jobs/view' or 'site:naukri.com/job-listings'.
-    Format: JSON list of strings.
-    """
-    try:
-        response = model.generate_content(prompt)
-        return json.loads(response.text.strip().replace('```json', '').replace('```', ''))
-    except:
-        return [f"site:linkedin.com/jobs/view {role} India"]
+# --- 3. UI LAYOUT ---
+# Header
+st.markdown("""
+    <div class="nav-bar">
+        <div style="font-weight:bold; font-size: 20px;">Google <span style="font-weight:300;">Research</span> &nbsp; <span style="color:#64748b; font-weight:300;">Job Explorer</span></div>
+        <div style="display: flex; gap: 30px; font-size: 13px; color: #94a3b8;">
+            <span>Current Vacancies</span>
+            <span>HR Directory</span>
+            <span>Fresh Posts (48h)</span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
-# --- AGENT 2: HR Email Hunter ---
-def get_email_queries(role, api_key):
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    prompt = f"""
-    Generate 3 Google search queries to find LinkedIn posts where HRs ask for resumes via email.
-    Role: {role}.
-    Keywords: "send resume to", "hiring", "@gmail.com" OR "@company.com".
-    Format: JSON list of strings.
-    """
-    try:
-        response = model.generate_content(prompt)
-        return json.loads(response.text.strip().replace('```json', '').replace('```', ''))
-    except:
-        return [f'site:linkedin.com/posts "{role}" "send resume to"']
+# Hero
+st.markdown('<h1 class="hero-title">Explore career opportunities</h1>', unsafe_allow_html=True)
+st.markdown('<p class="hero-subtitle">Agentic search across India\'s top job portals and social networks, filtered for the last 48 hours.</p>', unsafe_allow_html=True)
 
-# --- 4. MAIN APP ---
-col1, col2 = st.columns([1, 5])
-with col1:
-    st.image("https://cdn-icons-png.flaticon.com/512/2950/2950637.png", width=80)
-with col2:
-    st.title("TagBuddy Phase 2")
-    st.markdown("<p style='margin-top: -15px;'>The Agentic Job Hunter (Direct Links + Hidden HR Emails)</p>", unsafe_allow_html=True)
-
+# Main Controls
 with st.container():
-    st.markdown('<div class="main-container">', unsafe_allow_html=True)
-    
-    c1, c2 = st.columns(2)
-    with c1:
-        role = st.selectbox("Target Role", [
-            "Corporate Strategy", "Product Manager", "Strategy Consultant", 
-            "Management Trainee", "Operations Associate", "Planning Associate",
-            "Area Sales Manager", "SAP Functional Consultant", "SAP Technical Consultant",
-            "Business Analyst", "Data Scientist", "MBA Freshers", "BTech Freshers"
-        ])
-    with c2:
-        exp = st.selectbox("Experience", ["0-1 Years", "1-3 Years", "3-5 Years", "5-8 Years", "8+ Years"])
-    
-    st.markdown('<label style="color:white; font-size:1.1rem; font-weight:600;">Upload Resume (PDF)<span style="color:red">*</span></label>', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader("", type="pdf", label_visibility="collapsed")
-    
-    if st.button("🚀 Activate Agents"):
-        if not uploaded_file or not gemini_key or not serper_key:
-            st.error("Please ensure keys are entered and resume is uploaded.")
-        else:
-            with st.spinner("🤖 Agents are scanning the web..."):
-                headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
-                
-                # 1. Run Standard Agent
-                std_queries = get_standard_queries(role, exp, gemini_key)
-                std_results = []
-                for q in std_queries:
-                    res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
-                    std_results.extend(res.json().get('organic', []))
-                
-                # 2. Run Email Hunter Agent
-                email_queries = get_email_queries(role, gemini_key)
-                email_results = []
-                for q in email_queries:
-                    res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
-                    email_results.extend(res.json().get('organic', []))
-            
-            st.markdown('</div>', unsafe_allow_html=True) # Close Container
-            
-            # --- DISPLAY RESULTS ---
-            tab1, tab2 = st.tabs(["🔗 Direct Apply Links", "📧 Hidden HR Emails"])
-            
-            # TAB 1: STANDARD JOBS
-            with tab1:
-                st.markdown("<h3 style='color:white !important; margin-bottom:20px;'>Official Job Portals</h3>", unsafe_allow_html=True)
-                seen_links = set()
-                count = 0
-                for job in std_results:
-                    if job['link'] not in seen_links and count < 10:
-                        seen_links.add(job['link'])
-                        count += 1
-                        st.markdown(f"""
-                        <div class="job-card">
-                            <div class="card-title">{job['title']}</div>
-                            <div class="card-meta">📍 {job.get('source', 'Job Portal')}</div>
-                            <div class="card-snippet">{job.get('snippet', '')}</div>
-                            <a class="std-link" href="{job['link']}" target="_blank">Apply Now ➜</a>
-                        </div>
-                        """, unsafe_allow_html=True)
-                if count == 0:
-                    st.info("No standard links found.")
+    col_a, col_b, col_c = st.columns([2, 1, 1])
+    with col_a:
+        role_input = st.selectbox("Target Role", ["Product Manager", "Strategy Consultant", "Data Scientist", "Business Analyst", "Operations Associate", "MBA Fresher", "Software Engineer"], label_visibility="collapsed")
+    with col_b:
+        exp_input = st.selectbox("Exp", ["0-2 Years", "2-5 Years", "5+ Years"], label_visibility="collapsed")
+    with col_c:
+        if st.button("Search Jobs", use_container_width=True):
+            st.session_state.search_clicked = True
 
-            # TAB 2: EMAIL POSTS
-            with tab2:
-                st.markdown("<h3 style='color:white !important; margin-bottom:20px;'>Social Posts with HR Emails</h3>", unsafe_allow_html=True)
-                email_count = 0
-                seen_emails = set()
+# --- 4. EXECUTION & RESULTS ---
+if st.session_state.get('search_clicked'):
+    with st.spinner("Scanning for recent posts..."):
+        headers = {'X-API-KEY': serper_key, 'Content-Type': 'application/json'}
+        
+        # We use 'tbs': 'qdr:d2' to filter results to the past 2 days
+        queries = get_recent_jobs(role_input, gemini_key, "standard") + get_recent_jobs(role_input, gemini_key, "email")
+        
+        all_results = []
+        for q in queries[:4]: # Limit queries for speed
+            payload = {"q": q, "num": 8, "tbs": "qdr:d2"} # THE MAGIC PARAMETER FOR FRESHNESS
+            res = requests.post("https://google.serper.dev/search", headers=headers, json=payload)
+            if res.status_code == 200:
+                all_results.extend(res.json().get('organic', []))
+
+    # Tabs for Display
+    t1, t2 = st.tabs(["Direct Apply", "HR Contact Posts"])
+    
+    with t1:
+        st.markdown("<br>", unsafe_allow_html=True)
+        seen = set()
+        for i, item in enumerate(all_results):
+            if item['link'] not in seen and len(seen) < 10:
+                seen.add(item['link'])
+                emails = extract_emails(item.get('snippet', ''))
                 
-                for post in email_results:
-                    snippet = post.get('snippet', '')
-                    found_emails = extract_emails(snippet)
-                    
-                    if found_emails and post['link'] not in seen_emails:
-                        seen_emails.add(post['link'])
-                        # Create HTML chips for emails
-                        email_chip_html = "".join([f'<span class="email-chip">✉️ {e}</span>' for e in found_emails])
-                        
-                        st.markdown(f"""
-                        <div class="email-card">
-                            <div class="card-title">{post['title']}</div>
-                            <div class="card-meta">🔗 LinkedIn / Social Post</div>
-                            <div style="margin-bottom:10px;">{email_chip_html}</div>
-                            <div class="card-snippet">{snippet}</div>
-                            <a class="email-link" href="{post['link']}" target="_blank">View Post ➜</a>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        email_count += 1
+                st.markdown(f"""
+                <div class="result-card">
+                    <span class="tag">RECENT POST • {item.get('source', 'Web')}</span>
+                    <a href="{item['link']}" class="card-link" target="_blank">{item['title']}</a>
+                    <div class="card-snippet">{item.get('snippet', '')}</div>
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                        <span style="color:#3b82f6; font-size:12px;">{' | '.join(emails) if emails else 'Portal Application'}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                if email_count == 0:
-                    st.info("No direct email posts found right now. Try a broader role name.")
+                # Copy Link Feature
+                st.button(f"🔗 Copy Link", key=f"btn_{i}", on_click=lambda l=item['link']: st.write(f"Link Copied: {l}"))
+
+    with t2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        email_posts = [r for r in all_results if extract_emails(r.get('snippet', ''))]
+        if not email_posts:
+            st.info("No direct email posts found in the last 48 hours. Try a broader role.")
+        else:
+            for i, post in enumerate(email_posts):
+                emails = extract_emails(post.get('snippet', ''))
+                st.markdown(f"""
+                <div class="result-card" style="border-left: 2px solid #8b5cf6;">
+                    <span class="tag" style="color:#8b5cf6;">DIRECT HR EMAIL</span>
+                    <a href="{post['link']}" class="card-link" target="_blank">{post['title']}</a>
+                    <div class="card-snippet">{post['snippet']}</div>
+                    <div style="background: rgba(139, 92, 246, 0.1); padding: 8px; border-radius: 4px; color: #c4b5fd; font-size: 13px;">
+                        📧 Emails found: {', '.join(emails)}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.button(f"🔗 Copy Post Link", key=f"email_btn_{i}", on_click=lambda l=post['link']: st.write(f"Link Copied: {l}"))
+
+# Stats Panel (Bottom Right)
+st.markdown(f"""
+    <div class="stats-panel">
+        World Overview<br>
+        Active Leads: 100+<br>
+        Freshness: 48h Window<br>
+        Status: Agents Active<br><br>
+        <div style="border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px; text-align:center;">
+            Updated {datetime.now().strftime('%H:%M')}
+        </div>
+    </div>
+    <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: #475569; font-size: 10px;">
+        This site is best experienced with intent and a fresh resume
+    </div>
+""", unsafe_allow_html=True)
