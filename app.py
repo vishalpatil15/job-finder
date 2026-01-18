@@ -4,6 +4,7 @@ import requests
 from pypdf import PdfReader
 import json
 import re
+import html  # Added for safety cleaning
 
 # --- 1. PAGE CONFIG & ULTRA-MODERN UI ---
 st.set_page_config(page_title="TagBuddy: AI Job Architect", page_icon="🧬", layout="wide")
@@ -18,12 +19,12 @@ st.markdown("""
         background-attachment: fixed;
     }
     
-    /* HIDE STREAMLIT BRANDING */
+    /* HIDE BRANDING */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* CENTERED HEADER UTILITIES */
+    /* CENTERED HEADER */
     .header-container {
         display: flex;
         flex-direction: column;
@@ -33,18 +34,14 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* LOGO ANIMATION */
     .logo-img {
         width: 120px;
         margin-bottom: 15px;
         filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5));
         transition: transform 0.3s ease;
     }
-    .logo-img:hover {
-        transform: scale(1.05);
-    }
+    .logo-img:hover { transform: scale(1.05); }
 
-    /* TYPOGRAPHY */
     h1 { 
         color: #ffffff !important; 
         font-weight: 800 !important;
@@ -65,7 +62,7 @@ st.markdown("""
         margin-top: 10px !important;
     }
 
-    /* GLASS SEARCH BAR CONTAINER */
+    /* SEARCH CONTAINER */
     .search-container {
         background: rgba(30, 41, 59, 0.4);
         padding: 30px;
@@ -76,7 +73,6 @@ st.markdown("""
         margin-bottom: 40px;
     }
 
-    /* INPUT STYLING */
     .stSelectbox label, .stFileUploader label {
         color: #e2e8f0 !important;
         font-size: 0.9rem !important;
@@ -85,7 +81,7 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     
-    /* ACTION BUTTON */
+    /* BUTTON */
     .stButton > button {
         background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
         color: white;
@@ -103,8 +99,7 @@ st.markdown("""
         box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.6);
     }
 
-    /* --- INTELLIGENT JOB CARDS --- */
-    
+    /* JOB CARDS */
     .job-card {
         background: rgba(255, 255, 255, 0.96);
         border-radius: 16px;
@@ -116,7 +111,6 @@ st.markdown("""
     }
     .job-card:hover { transform: translateY(-3px); }
 
-    /* MATCH SCORE BADGE */
     .match-badge {
         position: absolute;
         top: 20px;
@@ -126,39 +120,41 @@ st.markdown("""
         font-weight: 800;
         font-size: 14px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        z-index: 10;
     }
-    .high-match { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; } /* Green */
-    .med-match { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; } /* Yellow */
-    .low-match { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; } /* Red */
+    .high-match { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .med-match { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .low-match { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
-    /* Typography */
-    .job-title { color: #0f172a; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .job-title { color: #0f172a; font-size: 20px; font-weight: 700; margin-bottom: 6px; padding-right: 100px; }
     .job-source { color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
-    .job-snippet { color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 20px; max-width: 85%; }
+    .job-snippet { color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
 
-    /* Links */
+    /* LINKS */
     a.apply-link {
         display: inline-block;
         background: #0f172a;
-        color: white;
+        color: white !important;
         text-decoration: none;
         padding: 10px 24px;
         border-radius: 8px;
         font-weight: 600;
         font-size: 14px;
         transition: background 0.2s;
+        border: none;
     }
-    a.apply-link:hover { background: #334155; }
+    a.apply-link:hover { background: #334155; color: white !important; }
     
-    .share-link {
-        font-family: monospace;
-        font-size: 11px;
+    .share-box {
         background: #f1f5f9;
-        padding: 8px;
-        border-radius: 6px;
-        color: #64748b;
-        margin-top: 15px;
+        padding: 10px;
+        border-radius: 8px;
         border: 1px dashed #cbd5e1;
+        margin-top: 15px;
+        font-family: monospace;
+        font-size: 12px;
+        color: #475569;
+        word-break: break-all;
     }
 
     /* TABS */
@@ -177,7 +173,6 @@ st.markdown("""
         border-color: #3b82f6;
     }
     
-    /* ALERTS */
     .stAlert { border-radius: 12px; }
     </style>
     """, unsafe_allow_html=True)
@@ -220,15 +215,11 @@ def get_search_queries(role, exp, api_key, query_type="standard"):
     except:
         return [f"site:linkedin.com/jobs/view {role}"] if query_type=="standard" else [f'site:linkedin.com/posts "{role}" "send resume"']
 
-# --- AGENT 2: THE "AI RECRUITER" (MATCH SCORING) ---
+# --- AGENT 2: AI RECRUITER (MATCH SCORING) ---
 def analyze_match_batch(resume_text, jobs_list, api_key):
-    """
-    Sends a batch of job snippets + resume to Gemini to calculate probability scores.
-    """
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    # Prepare a minimal JSON of jobs to save tokens
     jobs_summary = []
     for i, job in enumerate(jobs_list):
         jobs_summary.append({
@@ -239,19 +230,10 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
     
     prompt = f"""
     Act as a Senior Recruiter. Compare this Resume Summary against the Job Descriptions.
-    
-    RESUME SUMMARY:
-    {resume_text[:2000]}
-    
-    JOB LIST:
-    {json.dumps(jobs_summary)}
-    
-    TASK:
-    For each job, calculate a "Shortlist Probability" (0-100%) based on keyword matching and relevance.
-    
-    OUTPUT FORMAT:
-    Return ONLY a JSON dictionary where keys are the Job IDs (as strings) and values are the percentage integers.
-    Example: {{"0": 85, "1": 40, "2": 95}}
+    RESUME SUMMARY: {resume_text[:2000]}
+    JOB LIST: {json.dumps(jobs_summary)}
+    TASK: Calculate "Shortlist Probability" (0-100%) for each job.
+    OUTPUT FORMAT: JSON dictionary {{ "0": 85, "1": 40 }}
     """
     
     try:
@@ -259,11 +241,11 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
         match_scores = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
         return match_scores
     except:
-        return {} # Return empty if AI fails
+        return {} 
 
 # --- 4. MAIN LAYOUT ---
 
-# CENTERED HEADER WITH LOGO
+# CENTERED HEADER
 st.markdown("""
     <div class="header-container">
         <img src="https://cdn-icons-png.flaticon.com/512/12392/12392769.png" class="logo-img">
@@ -272,7 +254,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# GLASS SEARCH CONTAINER
+# SEARCH CONTAINER
 with st.container():
     st.markdown('<div class="search-container">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1.5, 1.5, 2])
@@ -317,6 +299,7 @@ with st.container():
                 email_queries = get_search_queries(role, exp, gemini_key, "email")
                 email_raw_results = []
                 for q in email_queries:
+                    # Time filter qdr:h48 (last 48 hours)
                     res = requests.post("https://google.serper.dev/search?tbs=qdr:h48", headers=headers, json={"q": q, "num": 5})
                     email_raw_results.extend(res.json().get('organic', []))
 
@@ -338,25 +321,29 @@ with st.container():
                     st.info("No jobs found matching criteria.")
                 
                 for i, job in enumerate(top_jobs):
-                    # Get score from AI (default to 50% if failed)
                     score = match_scores.get(str(i), match_scores.get(i, 50))
                     
-                    # Badge Color Logic
                     badge_class = "med-match"
                     if score >= 80: badge_class = "high-match"
                     elif score < 50: badge_class = "low-match"
 
+                    # CLEAN DATA FOR HTML
+                    clean_title = html.escape(job.get('title', 'Job Role'))
+                    clean_snippet = html.escape(job.get('snippet', ''))
+                    clean_source = html.escape(job.get('source', 'Job Portal'))
+                    link = job['link']
+
                     st.markdown(f"""
                     <div class="job-card">
                         <div class="match-badge {badge_class}">⚡ {score}% Match</div>
-                        <div class="job-title">{job['title']}</div>
-                        <div class="job-source">📍 {job.get('source', 'Job Portal')}</div>
-                        <div class="job-snippet">{job.get('snippet', '')}</div>
+                        <div class="job-title">{clean_title}</div>
+                        <div class="job-source">📍 {clean_source}</div>
+                        <div class="job-snippet">{clean_snippet}</div>
                         
-                        <div style="display:flex; flex-direction:column; gap:10px;">
-                            <a href="{job['link']}" target="_blank" class="apply-link">Apply Now ➜</a>
-                            <div class="share-link">🔗 Copy Link: {job['link']}</div>
+                        <div style="margin-top:20px;">
+                            <a href="{link}" target="_blank" class="apply-link">Apply Now ➜</a>
                         </div>
+                        <div class="share-box">🔗 {link}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -368,15 +355,19 @@ with st.container():
                     found_emails = extract_emails(post.get('snippet', ''))
                     if found_emails and post['link'] not in seen_emails:
                         seen_emails.add(post['link'])
+                        
+                        clean_title = html.escape(post.get('title', 'Social Post'))
+                        clean_snippet = html.escape(post.get('snippet', ''))
+                        
                         email_chips = "".join([f"<span style='background:#ede9fe; color:#6d28d9; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold;'>✉️ {e}</span>" for e in found_emails])
                         
                         st.markdown(f"""
                         <div class="job-card" style="border-left: 5px solid #8b5cf6;">
-                            <div class="job-title">{post['title']}</div>
+                            <div class="job-title">{clean_title}</div>
                             <div class="job-source">🔗 Social Post (Last 48 Hours)</div>
                             <div style="margin-bottom:15px;">{email_chips}</div>
-                            <div class="job-snippet">{post.get('snippet', '')}</div>
-                            <a href="{post['link']}" target="_blank" style="color:#8b5cf6; font-weight:bold;">View Post ➜</a>
+                            <div class="job-snippet">{clean_snippet}</div>
+                            <a href="{post['link']}" target="_blank" style="color:#8b5cf6; font-weight:bold; text-decoration:none;">View Post ➜</a>
                         </div>
                         """, unsafe_allow_html=True)
                         email_count += 1
