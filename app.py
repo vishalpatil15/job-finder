@@ -1,4 +1,3 @@
-
 import streamlit as st
 import google.generativeai as genai
 import requests
@@ -315,20 +314,16 @@ st.markdown("""
         box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.3);
     }
     
-    .email-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 15px 0;
-    }
-    
     .email-chip {
+        display: inline-block;
         background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
         color: white;
         padding: 6px 14px;
         border-radius: 20px;
         font-weight: 700;
         font-size: 12px;
+        margin-right: 8px;
+        margin-bottom: 8px;
         box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);
         letter-spacing: 0.3px;
     }
@@ -548,9 +543,124 @@ with st.container():
                         res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
                         if res.status_code == 200:
                             std_raw_results.extend(res.json().get('organic', []))
-                    except: pass
+                    except: 
+                        pass
                 
                 # Filter Top 10 Unique
                 seen_links = set()
                 top_jobs = []
                 for job in std_raw_results:
+                    if job.get('link') and job['link'] not in seen_links and len(top_jobs) < 10:
+                        seen_links.add(job['link'])
+                        top_jobs.append(job)
+                
+                # 2. EMAIL SEARCH (1 Week Filter)
+                email_queries = get_search_queries(role, exp, industry, gemini_key, "email")
+                email_raw_results = []
+                for q in email_queries:
+                    try:
+                        # Time filter qdr:w (last week)
+                        res = requests.post("https://google.serper.dev/search?tbs=qdr:w", headers=headers, json={"q": q, "num": 5})
+                        if res.status_code == 200:
+                            email_raw_results.extend(res.json().get('organic', []))
+                    except: 
+                        pass
+
+            # 3. AI RECRUITER AGENT: CALCULATE MATCH SCORES
+            if top_jobs:
+                with st.spinner("🧠 AI Recruiter is calculating your shortlist probability..."):
+                    match_scores = analyze_match_batch(resume_text, top_jobs, gemini_key)
+            else:
+                match_scores = {}
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # STATS BANNER
+            if top_jobs or email_raw_results:
+                st.markdown(f"""
+                <div class="stats-banner">
+                    <div class="stats-text">
+                        Found <span class="stats-number">{len(top_jobs)}</span> Job Matches 
+                        & <span class="stats-number">{len([e for e in email_raw_results if extract_emails(e.get('snippet', ''))])}</span> HR Email Posts
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # --- DISPLAY RESULTS ---
+            tab1, tab2 = st.tabs(["🎯 Top Matches (AI Scored)", "📨 HR Email Opportunities"])
+            
+            # TAB 1: SCORED JOBS
+            with tab1:
+                if not top_jobs:
+                    st.info("🔍 No jobs found matching your criteria. Try adjusting your filters.")
+                else:
+                    for i, job in enumerate(top_jobs):
+                        score = match_scores.get(str(i), match_scores.get(i, 50))
+                        
+                        badge_class = "med-match"
+                        if score >= 80: badge_class = "high-match"
+                        elif score < 50: badge_class = "low-match"
+
+                        # SANITIZE TEXT CONTENT
+                        clean_title = html.escape(job.get('title', 'Job Role'))
+                        clean_snippet = html.escape(job.get('snippet', ''))
+                        clean_source = html.escape(job.get('source', 'Job Portal'))
+                        
+                        raw_link = job.get('link', '#')
+                        display_link = html.escape(raw_link)
+                        
+                        # RENDER CARD
+                        job_card_html = f"""
+<div class="job-card">
+    <div class="match-badge {badge_class}">⚡ {score}% Match</div>
+    <div class="job-title">{clean_title}</div>
+    <div class="job-source">📍 {clean_source}</div>
+    <div class="job-snippet">{clean_snippet}</div>
+    <div class="action-row">
+        <a href="{raw_link}" target="_blank" class="apply-link">Apply Now ➜</a>
+        <div class="share-box-container">
+            <span class="share-label">🔗 Share:</span>
+            <span class="share-url">{display_link}</span>
+        </div>
+    </div>
+</div>
+"""
+                        st.markdown(job_card_html, unsafe_allow_html=True)
+
+            # TAB 2: HR EMAILS (Last Week)
+            with tab2:
+                email_count = 0
+                seen_emails_posts = set()
+                
+                for post in email_raw_results:
+                    found_emails = extract_emails(post.get('snippet', ''))
+                    if found_emails and post.get('link') and post['link'] not in seen_emails_posts:
+                        seen_emails_posts.add(post['link'])
+                        
+                        clean_title = html.escape(post.get('title', 'Social Post'))
+                        clean_snippet = html.escape(post.get('snippet', ''))
+                        raw_link = post['link']
+                        display_link = html.escape(raw_link)
+                        
+                        email_chips_html = "".join([f'<span class="email-chip">✉️ {html.escape(e)}</span>' for e in found_emails])
+                        
+                        email_card_html = f"""
+<div class="email-card">
+    <div class="job-title">{clean_title}</div>
+    <div class="job-source">🔗 LinkedIn Post (Last Week)</div>
+    <div style="margin: 15px 0;">{email_chips_html}</div>
+    <div class="job-snippet">{clean_snippet}</div>
+    <div class="action-row">
+        <a href="{raw_link}" target="_blank" class="apply-link" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">View Post ➜</a>
+        <div class="share-box-container">
+            <span class="share-label">🔗 Share:</span>
+            <span class="share-url">{display_link}</span>
+        </div>
+    </div>
+</div>
+"""
+                        st.markdown(email_card_html, unsafe_allow_html=True)
+                        email_count += 1
+                
+                if email_count == 0:
+                    st.warning("📭 No fresh HR email posts found in the last week. Check back soon!")
