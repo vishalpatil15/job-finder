@@ -51,7 +51,6 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         margin-bottom: 15px;
-        /* The "Light Everywhere" Effect */
         animation: searchlight 3s infinite ease-in-out;
         border: 2px solid rgba(255,255,255,0.1);
     }
@@ -192,7 +191,7 @@ st.markdown("""
     .share-url { 
         font-family: monospace; 
         word-break: break-all; 
-        user-select: all; /* Allows single click selection */
+        user-select: all;
         color: #3b82f6;
     }
 
@@ -250,7 +249,6 @@ def get_search_queries(role, exp, api_key, query_type="standard"):
         
     try:
         response = model.generate_content(prompt)
-        # Cleaning the response to ensure valid JSON
         text = response.text.strip()
         if text.startswith('```json'): text = text[7:]
         if text.endswith('```'): text = text[:-3]
@@ -295,7 +293,6 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
 st.markdown("""
     <div class="header-container">
         <div class="lamp-container">
-            <!-- This GIF looks like the hopping Pixar lamp -->
             <img src="https://media.tenor.com/uB4069n6Xn4AAAAi/pixar-lamp.gif" class="lamp-img">
         </div>
         <h1>TagBuddy</h1>
@@ -352,7 +349,6 @@ with st.container():
                 email_raw_results = []
                 for q in email_queries:
                     try:
-                        # Time filter qdr:h48 (last 48 hours)
                         res = requests.post("https://google.serper.dev/search?tbs=qdr:h48", headers=headers, json={"q": q, "num": 5})
                         if res.status_code == 200:
                             email_raw_results.extend(res.json().get('organic', []))
@@ -365,7 +361,7 @@ with st.container():
             else:
                 match_scores = {}
 
-            st.markdown('</div>', unsafe_allow_html=True) # Close Search Container
+            st.markdown('</div>', unsafe_allow_html=True)
 
             # --- DISPLAY RESULTS ---
             tab1, tab2 = st.tabs(["🎯 Top Matches (Scored)", "📨 Fresh HR Emails"])
@@ -374,37 +370,42 @@ with st.container():
             with tab1:
                 if not top_jobs:
                     st.info("No jobs found matching criteria.")
-                
-                for i, job in enumerate(top_jobs):
-                    score = match_scores.get(str(i), match_scores.get(i, 50))
-                    
-                    badge_class = "med-match"
-                    if score >= 80: badge_class = "high-match"
-                    elif score < 50: badge_class = "low-match"
-
-                    # SANITIZE INPUTS TO PREVENT HTML BREAKING
-                    clean_title = html.escape(job.get('title', 'Job Role'))
-                    clean_snippet = html.escape(job.get('snippet', ''))
-                    clean_source = html.escape(job.get('source', 'Job Portal'))
-                    raw_link = job.get('link', '#')
-                    
-                    # RENDER CARD
-                    st.markdown(f"""
-                    <div class="job-card">
-                        <div class="match-badge {badge_class}">⚡ {score}% Match</div>
-                        <div class="job-title">{clean_title}</div>
-                        <div class="job-source">📍 {clean_source}</div>
-                        <div class="job-snippet">{clean_snippet}</div>
+                else:
+                    for i, job in enumerate(top_jobs):
+                        score = match_scores.get(str(i), match_scores.get(i, 50))
                         
-                        <div class="action-row">
-                            <a href="{raw_link}" target="_blank" class="apply-link">Apply Now ➜</a>
-                            <div class="share-box-container">
-                                <span class="share-label">🔗 Share:</span>
-                                <span class="share-url">{raw_link}</span>
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        badge_class = "med-match"
+                        if score >= 80: badge_class = "high-match"
+                        elif score < 50: badge_class = "low-match"
+
+                        # SANITIZE TEXT CONTENT (but NOT the URL in href)
+                        clean_title = html.escape(job.get('title', 'Job Role'))
+                        clean_snippet = html.escape(job.get('snippet', ''))
+                        clean_source = html.escape(job.get('source', 'Job Portal'))
+                        
+                        # Get the raw link (don't escape it for href attribute)
+                        raw_link = job.get('link', '#')
+                        
+                        # Escape the link ONLY for display in the share box
+                        display_link = html.escape(raw_link)
+                        
+                        # RENDER CARD - Notice raw_link is used in href, display_link in text
+                        job_card_html = f"""
+<div class="job-card">
+    <div class="match-badge {badge_class}">⚡ {score}% Match</div>
+    <div class="job-title">{clean_title}</div>
+    <div class="job-source">📍 {clean_source}</div>
+    <div class="job-snippet">{clean_snippet}</div>
+    <div class="action-row">
+        <a href="{raw_link}" target="_blank" class="apply-link">Apply Now ➜</a>
+        <div class="share-box-container">
+            <span class="share-label">🔗 Share:</span>
+            <span class="share-url">{display_link}</span>
+        </div>
+    </div>
+</div>
+"""
+                        st.markdown(job_card_html, unsafe_allow_html=True)
 
             # TAB 2: HR EMAILS
             with tab2:
@@ -418,20 +419,26 @@ with st.container():
                         clean_title = html.escape(post.get('title', 'Social Post'))
                         clean_snippet = html.escape(post.get('snippet', ''))
                         raw_link = post['link']
+                        display_link = html.escape(raw_link)
                         
-                        email_chips = "".join([f"<span style='background:#ede9fe; color:#6d28d9; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold;'>✉️ {e}</span>" for e in found_emails])
+                        email_chips = "".join([f'<span style="background:#ede9fe; color:#6d28d9; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold;">✉️ {html.escape(e)}</span>' for e in found_emails])
                         
-                        st.markdown(f"""
-                        <div class="job-card" style="border-left: 5px solid #8b5cf6;">
-                            <div class="job-title">{clean_title}</div>
-                            <div class="job-source">🔗 Social Post (Last 48 Hours)</div>
-                            <div style="margin-bottom:15px;">{email_chips}</div>
-                            <div class="job-snippet">{clean_snippet}</div>
-                            <div class="action-row">
-                                <a href="{raw_link}" target="_blank" style="display:block; text-align:center; color:#8b5cf6; font-weight:bold; text-decoration:none; padding:10px; border:1px solid #8b5cf6; border-radius:8px;">View Post ➜</a>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        email_card_html = f"""
+<div class="job-card" style="border-left: 5px solid #8b5cf6;">
+    <div class="job-title">{clean_title}</div>
+    <div class="job-source">🔗 Social Post (Last 48 Hours)</div>
+    <div style="margin-bottom:15px;">{email_chips}</div>
+    <div class="job-snippet">{clean_snippet}</div>
+    <div class="action-row">
+        <a href="{raw_link}" target="_blank" class="apply-link" style="background:#8b5cf6;">View Post ➜</a>
+        <div class="share-box-container">
+            <span class="share-label">🔗 Share:</span>
+            <span class="share-url">{display_link}</span>
+        </div>
+    </div>
+</div>
+"""
+                        st.markdown(email_card_html, unsafe_allow_html=True)
                         email_count += 1
                 
                 if email_count == 0:
