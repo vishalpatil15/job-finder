@@ -35,21 +35,32 @@ st.markdown("""
         margin-bottom: 2rem;
     }
     
-    /* DYNAMIC LAMP LOGO STYLING */
+    /* PIXAR LAMP ANIMATION STYLING */
+    @keyframes searchlight {
+        0% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+        50% { box-shadow: 0 0 80px rgba(59, 130, 246, 0.8), 0 0 150px rgba(255, 255, 255, 0.4); }
+        100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+    }
+    
     .lamp-container {
-        width: 150px;
-        height: 150px;
+        width: 140px;
+        height: 140px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, rgba(0,0,0,0) 70%);
+        background: #000;
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
+        /* The "Light Everywhere" Effect */
+        animation: searchlight 3s infinite ease-in-out;
+        border: 2px solid rgba(255,255,255,0.1);
     }
+    
     .lamp-img {
-        width: 120px;
-        height: auto;
-        filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
     }
 
     /* TYPOGRAPHY */
@@ -63,6 +74,7 @@ st.markdown("""
         background: -webkit-linear-gradient(#eee, #3b82f6);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
     }
     p.subtitle { 
         color: #94a3b8 !important; 
@@ -119,9 +131,9 @@ st.markdown("""
         position: relative;
         border: 1px solid rgba(255,255,255,0.1);
         transition: transform 0.2s;
-        overflow: hidden; /* Ensures content stays inside */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    .job-card:hover { transform: translateY(-3px); }
+    .job-card:hover { transform: translateY(-3px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
 
     .match-badge {
         position: absolute;
@@ -142,32 +154,46 @@ st.markdown("""
     .job-source { color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
     .job-snippet { color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
 
-    /* LINKS */
+    /* ACTION AREA */
+    .action-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 15px;
+    }
+
     a.apply-link {
-        display: inline-block;
+        display: block;
+        text-align: center;
         background: #0f172a;
         color: white !important;
         text-decoration: none;
-        padding: 10px 24px;
+        padding: 12px 24px;
         border-radius: 8px;
         font-weight: 600;
         font-size: 14px;
         transition: background 0.2s;
-        border: none;
     }
-    a.apply-link:hover { background: #334155; color: white !important; }
+    a.apply-link:hover { background: #334155; }
     
-    .share-box {
-        background: #f1f5f9;
-        padding: 10px;
+    .share-box-container {
+        display: flex;
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
         border-radius: 8px;
-        border: 1px dashed #cbd5e1;
-        margin-top: 15px;
-        font-family: monospace;
+        padding: 8px 12px;
         font-size: 12px;
-        color: #475569;
-        word-break: break-all;
-        user-select: all; /* Makes it easy to select */
+        color: #64748b;
+    }
+    .share-label { font-weight: 700; margin-right: 8px; color: #475569; white-space: nowrap; }
+    .share-url { 
+        font-family: monospace; 
+        word-break: break-all; 
+        user-select: all; /* Allows single click selection */
+        color: #3b82f6;
     }
 
     /* TABS */
@@ -224,7 +250,11 @@ def get_search_queries(role, exp, api_key, query_type="standard"):
         
     try:
         response = model.generate_content(prompt)
-        return json.loads(response.text.strip().replace('```json', '').replace('```', ''))
+        # Cleaning the response to ensure valid JSON
+        text = response.text.strip()
+        if text.startswith('```json'): text = text[7:]
+        if text.endswith('```'): text = text[:-3]
+        return json.loads(text)
     except:
         return [f"site:linkedin.com/jobs/view {role}"] if query_type=="standard" else [f'site:linkedin.com/posts "{role}" "send resume"']
 
@@ -251,18 +281,22 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
     
     try:
         response = model.generate_content(prompt)
-        match_scores = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
+        text = response.text.strip()
+        if text.startswith('```json'): text = text[7:]
+        if text.endswith('```'): text = text[:-3]
+        match_scores = json.loads(text)
         return match_scores
     except:
         return {} 
 
 # --- 4. MAIN LAYOUT ---
 
-# CENTERED HEADER WITH DYNAMIC LAMP LOGO
+# CENTERED HEADER WITH PIXAR-STYLE LAMP LOGO
 st.markdown("""
     <div class="header-container">
         <div class="lamp-container">
-            <img src="https://media.tenor.com/J3iM0i_W8QoAAAAi/lamp-light.gif" class="lamp-img">
+            <!-- This GIF looks like the hopping Pixar lamp -->
+            <img src="https://media.tenor.com/uB4069n6Xn4AAAAi/pixar-lamp.gif" class="lamp-img">
         </div>
         <h1>TagBuddy</h1>
         <p class="subtitle">Agentic Job Intelligence. Resume Analysis. Direct Matches.</p>
@@ -299,14 +333,17 @@ with st.container():
                 std_queries = get_search_queries(role, exp, gemini_key, "standard")
                 std_raw_results = []
                 for q in std_queries:
-                    res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
-                    std_raw_results.extend(res.json().get('organic', []))
+                    try:
+                        res = requests.post("https://google.serper.dev/search", headers=headers, json={"q": q, "num": 5})
+                        if res.status_code == 200:
+                            std_raw_results.extend(res.json().get('organic', []))
+                    except: pass
                 
                 # Filter Top 10 Unique
                 seen_links = set()
                 top_jobs = []
                 for job in std_raw_results:
-                    if job['link'] not in seen_links and len(top_jobs) < 10:
+                    if job.get('link') and job['link'] not in seen_links and len(top_jobs) < 10:
                         seen_links.add(job['link'])
                         top_jobs.append(job)
                 
@@ -314,9 +351,12 @@ with st.container():
                 email_queries = get_search_queries(role, exp, gemini_key, "email")
                 email_raw_results = []
                 for q in email_queries:
-                    # Time filter qdr:h48 (last 48 hours)
-                    res = requests.post("https://google.serper.dev/search?tbs=qdr:h48", headers=headers, json={"q": q, "num": 5})
-                    email_raw_results.extend(res.json().get('organic', []))
+                    try:
+                        # Time filter qdr:h48 (last 48 hours)
+                        res = requests.post("https://google.serper.dev/search?tbs=qdr:h48", headers=headers, json={"q": q, "num": 5})
+                        if res.status_code == 200:
+                            email_raw_results.extend(res.json().get('organic', []))
+                    except: pass
 
             # 3. AI RECRUITER AGENT: CALCULATE MATCH SCORES
             if top_jobs:
@@ -342,16 +382,13 @@ with st.container():
                     if score >= 80: badge_class = "high-match"
                     elif score < 50: badge_class = "low-match"
 
-                    # --- KEY FIX: SANITIZE EVERYTHING ---
-                    # We use html.escape to make sure no weird characters break the UI
+                    # SANITIZE INPUTS TO PREVENT HTML BREAKING
                     clean_title = html.escape(job.get('title', 'Job Role'))
                     clean_snippet = html.escape(job.get('snippet', ''))
                     clean_source = html.escape(job.get('source', 'Job Portal'))
+                    raw_link = job.get('link', '#')
                     
-                    # Safe URL encoding
-                    raw_link = job['link']
-                    
-                    # We render the card HTML carefully
+                    # RENDER CARD
                     st.markdown(f"""
                     <div class="job-card">
                         <div class="match-badge {badge_class}">⚡ {score}% Match</div>
@@ -359,10 +396,13 @@ with st.container():
                         <div class="job-source">📍 {clean_source}</div>
                         <div class="job-snippet">{clean_snippet}</div>
                         
-                        <div style="margin-top:20px;">
+                        <div class="action-row">
                             <a href="{raw_link}" target="_blank" class="apply-link">Apply Now ➜</a>
+                            <div class="share-box-container">
+                                <span class="share-label">🔗 Share:</span>
+                                <span class="share-url">{raw_link}</span>
+                            </div>
                         </div>
-                        <div class="share-box">🔗 {raw_link}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -372,7 +412,7 @@ with st.container():
                 seen_emails = set()
                 for post in email_raw_results:
                     found_emails = extract_emails(post.get('snippet', ''))
-                    if found_emails and post['link'] not in seen_emails:
+                    if found_emails and post.get('link') and post['link'] not in seen_emails:
                         seen_emails.add(post['link'])
                         
                         clean_title = html.escape(post.get('title', 'Social Post'))
@@ -387,7 +427,9 @@ with st.container():
                             <div class="job-source">🔗 Social Post (Last 48 Hours)</div>
                             <div style="margin-bottom:15px;">{email_chips}</div>
                             <div class="job-snippet">{clean_snippet}</div>
-                            <a href="{raw_link}" target="_blank" style="color:#8b5cf6; font-weight:bold; text-decoration:none;">View Post ➜</a>
+                            <div class="action-row">
+                                <a href="{raw_link}" target="_blank" style="display:block; text-align:center; color:#8b5cf6; font-weight:bold; text-decoration:none; padding:10px; border:1px solid #8b5cf6; border-radius:8px;">View Post ➜</a>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                         email_count += 1
