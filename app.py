@@ -1,3 +1,12 @@
+The error occurs because **HTML comments** (like ``) inside the `st.markdown` block can sometimes break Streamlit's rendering engine, causing it to display raw code instead of the images.
+
+I have removed all comments and cleaned up the HTML structure to ensure it renders perfectly.
+
+### 💎 TagBuddy: Final Fixed Code
+
+**Copy and replace your entire `app.py` with this clean version.**
+
+```python
 import streamlit as st
 import google.generativeai as genai
 import requests
@@ -37,16 +46,14 @@ st.markdown("""
 
     /* --- ANIMATED LOGOS SECTION --- */
     
-    /* Container for side-by-side logos */
     .logos-row {
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: 25px; /* Spacing between logos */
+        gap: 25px;
         margin-bottom: 10px;
     }
 
-    /* The Main Pixar Lamp Container */
     .lamp-container {
         width: 130px;
         height: 130px;
@@ -55,7 +62,7 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        z-index: 2; /* Keep it in front */
+        z-index: 2;
     }
     .lamp-img {
         width: 100px;
@@ -63,14 +70,12 @@ st.markdown("""
         filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
     }
 
-    /* Side Platform Logos (LinkedIn/Naukri) */
     .side-logo {
         width: 55px;
         height: 55px;
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
         opacity: 0.9;
         transition: all 0.3s ease;
-        /* Apply the floating animation */
         animation: float 3s ease-in-out infinite;
     }
     .side-logo:hover {
@@ -78,14 +83,11 @@ st.markdown("""
         filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8));
     }
 
-    /* Keyframes for the "Floating" animation */
     @keyframes float {
         0% { transform: translateY(0px); }
-        50% { transform: translateY(-12px); } /* Move up */
-        100% { transform: translateY(0px); } /* Move back down */
+        50% { transform: translateY(-12px); }
+        100% { transform: translateY(0px); }
     }
-
-    /* --------------------------- */
 
     /* TYPOGRAPHY */
     h1 { 
@@ -294,15 +296,14 @@ def analyze_match_batch(resume_text, jobs_list, api_key):
 # --- 4. MAIN LAYOUT ---
 
 # CENTERED HEADER WITH ANIMATED SIDE-BY-SIDE LOGOS
+# (HTML comments removed to prevent rendering errors)
 st.markdown("""
     <div class="header-container">
         <div class="logos-row">
             <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" class="side-logo" style="animation-delay: 0s;">
-            
             <div class="lamp-container">
                 <img src="https://media.tenor.com/J3iM0i_W8QoAAAAi/lamp-light.gif" class="lamp-img">
             </div>
-            
             <img src="https://cdn-icons-png.flaticon.com/512/2910/2910768.png" class="side-logo" style="animation-delay: 1.5s;">
         </div>
         <h1>TagBuddy</h1>
@@ -431,3 +432,5 @@ with st.container():
                 
                 if email_count == 0:
                     st.warning("No fresh HR email posts found in the last 48 hours.")
+
+```
